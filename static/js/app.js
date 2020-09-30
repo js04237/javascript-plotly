@@ -1,11 +1,12 @@
 // Access the data
 var dataset = d3.json("data/samples.json")
 
-// Select the select toggle for subject ID
+// Select the toggle for subject ID
 var selector = d3.select("select");
+// Select the metadata table
 var metaTable = d3.select(".panel-body")
-// d3.selectAll("#selDataset").on("change", optionChanged);
 
+// Build the picklist toggle
 function AppendSelect(item) {
     Object.entries(item).forEach(([key, value]) => {
         var subjID = selector.append("option");
@@ -17,13 +18,12 @@ function AppendSelect(item) {
 // Function to add metadata to the "Demographic Info" panel
 function appendRow(mdata) {
     Object.entries(mdata).forEach(([key, value]) => {
-        var item = metaTable.append("div");
-        // Transform the keys to uppercase
+        // add an id that can be selected for removal
+        var item = metaTable.append("div").attr("id", "panel-body-item");
+        // convert the key to upper case
         item.text(key.toUpperCase() + ': ' + value);
     });
 };
-
-console.log(dataset);
 
 // Display the default plot
 function init() {
@@ -78,71 +78,11 @@ function init() {
           
         Plotly.newPlot('bubble', trace2, layout2);
 
-        // Gauge plot setup
-        // Modified from https://codepen.io/plotly/pen/rxeZME
-        // I don't really understand all the code here, but I was able to tweak it
-        // Trig to calc meter point
-        var degrees = 9 - wfreq,
-            radius = .5;
-        var radians = degrees * Math.PI / 9;
-        var x = radius * Math.cos(radians);
-        var y = radius * Math.sin(radians);
-
-        // Path: may have to change to create a better triangle
-        var mainPath = 'M -.0 -0.025 L .0 0.025 L ',
-            pathX = String(x),
-            space = ' ',
-            pathY = String(y),
-            pathEnd = ' Z';
-        var path = mainPath.concat(pathX,space,pathY,pathEnd);
-
-        var data = [{ 
-            type: 'scatter',
-            x: [0],
-            y:[0],
-            marker: {size: 28, color:'850000'},
-            showlegend: false,
-            name: 'Scrubs /Week',
-            text: wfreq,
-            hoverinfo: 'text+name'},
-            { values: [50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50],
-            rotation: 90,
-            text: ['8-9', '7-8', '6-7', '5-6', '4-5', '3-4', 
-                        '2-3', '1-2', '0-1', ''],
-            textinfo: 'text',
-            textposition:'inside',	  
-            marker: {colors:['rgba(14, 127, 0, .5)', 'rgba(50, 154, 22, .5)',
-                                    'rgba(85, 185, 45, .5)', 'rgba(115, 200, 75, .5)',
-                                    'rgba(170, 222, 95, .5)', 'rgba(210, 228, 135, .5)',
-                                    'rgba(232, 226, 202, .5)', 'rgba(205, 195, 155, .5)', 
-                                    'rgba(175, 175, 125, .5)', 'rgba(255, 255, 255, 0)']},
-            labels: ['8-9', '7-8', '6-7', '5-6', '4-5', '3-4', 
-                        '2-3', '1-2', '0-1', ''],
-            hoverinfo: 'label',
-            hole: .5,
-            type: 'pie',
-            showlegend: false
-        }];
-
-        var layout = {
-            shapes:[{
-                type: 'path',
-                path: path,
-                fillcolor: '850000',
-                line: {
-                    color: '850000'
-                }
-            }],
-            title: '<b>Belly Button Washing Frequency</b> <br> Scrubs per Week',
-            xaxis: {zeroline:false, showticklabels:false,
-                        showgrid: false, range: [-1, 1]},
-            yaxis: {zeroline:false, showticklabels:false,
-                        showgrid: false, range: [-1, 1]}
-        };
-
-        Plotly.newPlot('gauge', data, layout, {showSendToCloud:true});
-
+ 
+        showGauge(wfreq);
         AppendSelect(subjectIDs);
+
+
 
     })
 
@@ -156,6 +96,10 @@ function updatePlotlyBar(newdata) {
 function updatePlotlyBubble(newdata) {
     Plotly.restyle("bubble", newdata);
     // Plotly.restyle("gauge", "values", [newdata]);
+}
+
+function updatePlotlyGauge(newdata) {
+    Plotly.restyle("gauge", newdata);
 }
 
 // Function called by DOM changes
@@ -205,8 +149,88 @@ function optionChanged() {
         };
             
         updatePlotlyBubble(trace2);
-
+        // var metaTable = d3.select(".panel-body")
+        // var metaTableData = d3.selectAll("div")
+        // console.log(metaTableData)
+        // metaTableData = ""
+        d3.selectAll("#panel-body-item").remove()
+        // mda = d3.selectAll("panel-body-item")
+        
+        appendRow(metadata);
+        
+        showGauge(wfreq);
     });
+};
+
+
+// Gauge plot setup
+// Modified from https://codepen.io/plotly/pen/rxeZME
+// Getting this to work with restyle was a struggle, ending up sticking with recreating it on change
+function showGauge(wfreq) {
+        
+    // Trig to calc meter point
+    var degrees = 9 - wfreq,
+        radius = .5;
+    var radians = degrees * Math.PI / 9;
+    var x = radius * Math.cos(radians);
+    var y = radius * Math.sin(radians);
+
+    // Controls positioning the pointer
+    // Could use a little tweaking, the shape is wonky when it points between ~60-120 degrees 
+    var mainPath = 'M -.0 -0.025 L .0 0.025 L ',
+        pathX = String(x),
+        space = ' ',
+        pathY = String(y),
+        pathEnd = ' Z';
+    var path = mainPath.concat(pathX,space,pathY,pathEnd);
+
+    var data = [{ 
+        type: 'scatter',
+        x: [0],
+        y:[0],
+        marker: {size: 28, color:'850000'},
+        showlegend: false,
+        name: 'Scrubs /Week',
+        text: wfreq,
+        hoverinfo: 'text+name'},
+        { values: [50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50/9, 50],
+        rotation: 90,
+        text: ['8-9', '7-8', '6-7', '5-6', '4-5', '3-4', 
+                    '2-3', '1-2', '0-1', ''],
+        textinfo: 'text',
+        textposition:'inside',	  
+        marker: {colors:['rgba(14, 127, 0, .5)', 'rgba(50, 154, 22, .5)',
+                                'rgba(85, 185, 45, .5)', 'rgba(115, 200, 75, .5)',
+                                'rgba(170, 222, 95, .5)', 'rgba(210, 228, 135, .5)',
+                                'rgba(232, 226, 202, .5)', 'rgba(205, 195, 155, .5)', 
+                                'rgba(175, 175, 125, .5)', 'rgba(255, 255, 255, 0)']},
+        // The last label should prevent the bottom half of the pie chart from having a label,
+        // but instead it returns '9' on hover even though the label is blank
+        labels: ['8-9', '7-8', '6-7', '5-6', '4-5', '3-4', 
+                    '2-3', '1-2', '0-1', ''],
+        hoverinfo: 'label',
+        hole: .5,
+        type: 'pie',
+        showlegend: false
+    }];
+
+    var layout = {
+        shapes:[{
+            type: 'path',
+            path: path,
+            fillcolor: '850000',
+            line: {
+                color: '850000'
+            }
+        }],
+        title: '<b>Belly Button Washing Frequency</b> <br> Scrubs per Week',
+        xaxis: {zeroline:false, showticklabels:false,
+                    showgrid: false, range: [-1, 1]},
+        yaxis: {zeroline:false, showticklabels:false,
+                    showgrid: false, range: [-1, 1]}
+    };
+
+    Plotly.newPlot('gauge', data, layout)//, {showSendToCloud:true});
 }
 
 
