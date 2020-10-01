@@ -1,10 +1,10 @@
 // Access the data
-var dataset = d3.json("data/samples.json")
+var dataset = d3.json("data/samples.json");
 
 // Select the toggle for subject ID
 var selector = d3.select("select");
 // Select the metadata table
-var metaTable = d3.select(".panel-body")
+var metaTable = d3.select(".panel-body");
 
 // Build the picklist toggle
 function AppendSelect(item) {
@@ -17,109 +17,56 @@ function AppendSelect(item) {
 
 // Function to add metadata to the "Demographic Info" panel
 function appendRow(mdata) {
+
     Object.entries(mdata).forEach(([key, value]) => {
         // add an id that can be selected for removal
         var item = metaTable.append("div").attr("id", "panel-body-item");
         // convert the key to upper case
         item.text(key.toUpperCase() + ': ' + value);
+
     });
+
 };
 
 // Display the default plot
 function init() {
     
     dataset.then(function(data) {
-        // Grab values from the data json object to build the initial plot
-        var subjectIDs = data.names
+        // Grab values from the first data entry to build the initial plot
         var otu_ids = data.samples[0].otu_ids;
         var otu_labels = data.samples[0].otu_labels;
         var sample_values = data.samples[0].sample_values;
         var wfreq = data.metadata[0].wfreq;
         var metadata = data.metadata[0];
 
-        appendRow(metadata);
+        // Get all the names to populate the selector
+        var subjectIDs = data.names
 
-        // Bar chart setup
-        var trace1 = [{
-            x: sample_values.slice(0, 10),
-            y: otu_ids.slice(0,10).map(i => "OTU " + i),
-            text: otu_labels.slice(0, 10),
-            type: "bar",
-            orientation: "h",
-            transforms: [{
-                type: 'sort',
-                target: 'y',
-                order: 'descending'
-            }]
-        }];
-        
-        Plotly.newPlot("bar", trace1)
-        
-        // Bubble plot setup
-        var trace2 = [{
-            x: otu_ids,
-            y: sample_values,
-            text: otu_labels,
-            mode: 'markers',
-            marker: {
-                sizeref: 1.1,
-                color: otu_ids,
-                colorscale: 'Earth',
-                size: sample_values
-            }
-        }];
-          
-        var layout2 = {
-            showlegend: false,
-            xaxis: {
-                title: "OTU ID"
-            }
-        };
-          
-        Plotly.newPlot('bubble', trace2, layout2);
-
- 
-        showGauge(wfreq);
+        // Create the selector picklist
         AppendSelect(subjectIDs);
 
+        // Build the metadata table
+        appendRow(metadata);
 
+        // Build the plots/charts
+        showBarChart(sample_values, otu_ids, otu_labels);
+        showBubblePlot(sample_values, otu_ids, otu_labels);
+        showGauge(wfreq);
 
     })
 
 };
 
-// Update the restyled plot's values
-function updatePlotlyBar(newdata) {
-    Plotly.restyle("bar", newdata);
-}
-
-function updatePlotlyBubble(newdata) {
-    Plotly.restyle("bubble", newdata);
-    // Plotly.restyle("gauge", "values", [newdata]);
-}
-
-function updatePlotlyGauge(newdata) {
-    Plotly.restyle("gauge", newdata);
-}
-
 // Function called by DOM changes
 function optionChanged() {
 
-    // d3.event.preventDefault();
-
+    // Select the picklist
     var dropdownMenu = d3.select("#selDataset");
     // Assign the value of the dropdown menu option to a variable
-    var subjectID = dropdownMenu.property("value");
-    // console.log(subjectID)//.property("value"))
-    // console.log(document.getElementById(subjectID))
-    
-    
-    
+    var subjectID = dropdownMenu.property("value");  
+
     dataset.then(function(data) {
 
-        // Initialize an empty array for the country's data
-        // var data = [];
-    
         var otu_ids = data.samples[subjectID].otu_ids;
         var otu_labels = data.samples[subjectID].otu_labels;
         var sample_values = data.samples[subjectID].sample_values;
@@ -130,7 +77,7 @@ function optionChanged() {
         var trace1 = {
             x: [sample_values.slice(0, 10)],
             y: [otu_ids.slice(0,10).map(i => "OTU " + i)],
-            text: [otu_labels.slice(0, 10)],
+            text: [otu_labels.slice(0, 10)]
         };
 
         updatePlotlyBar(trace1);
@@ -149,19 +96,63 @@ function optionChanged() {
         };
             
         updatePlotlyBubble(trace2);
-        // var metaTable = d3.select(".panel-body")
-        // var metaTableData = d3.selectAll("div")
-        // console.log(metaTableData)
-        // metaTableData = ""
-        d3.selectAll("#panel-body-item").remove()
-        // mda = d3.selectAll("panel-body-item")
-        
+
+        // Clear the metadata from the 'Demographic Info' table
+        d3.selectAll("#panel-body-item").remove();
+        // Add new data to the 'Demographic Info' table
         appendRow(metadata);
         
+        // Update the gauge to recreating it
         showGauge(wfreq);
+
     });
+
 };
 
+function showBarChart(sample_values, otu_ids, otu_labels) {
+    var trace1 = [{
+        x: sample_values.slice(0, 10),
+        y: otu_ids.slice(0,10).map(i => "OTU " + i),
+        text: otu_labels.slice(0, 10),
+        type: "bar",
+        orientation: "h",
+        transforms: [{
+            type: 'sort',
+            target: 'y',
+            order: 'descending'
+        }]
+    }];
+
+    Plotly.newPlot("bar", trace1);
+
+};
+
+// Bubble plot setup
+function showBubblePlot(sample_values, otu_ids, otu_labels) {
+
+    var trace2 = [{
+        x: otu_ids,
+        y: sample_values,
+        text: otu_labels,
+        mode: 'markers',
+        marker: {
+            sizeref: 1.1,
+            color: otu_ids,
+            colorscale: 'Earth',
+            size: sample_values
+        }
+    }];
+        
+    var layout2 = {
+        showlegend: false,
+        xaxis: {
+            title: "OTU ID"
+        }
+    };
+        
+    Plotly.newPlot('bubble', trace2, layout2);
+
+};
 
 // Gauge plot setup
 // Modified from https://codepen.io/plotly/pen/rxeZME
@@ -230,9 +221,18 @@ function showGauge(wfreq) {
                     showgrid: false, range: [-1, 1]}
     };
 
-    Plotly.newPlot('gauge', data, layout)//, {showSendToCloud:true});
-}
+    Plotly.newPlot('gauge', data, layout);
 
+};
 
+// Restyle bar plot values
+function updatePlotlyBar(newdata) {
+    Plotly.restyle("bar", newdata);
+};
+
+// Restyle bubble plot values
+function updatePlotlyBubble(newdata) {
+    Plotly.restyle("bubble", newdata);
+};
 
 init();
